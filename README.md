@@ -1,7 +1,5 @@
 # SpectrePDF: Advanced PDF Redaction and Annotation Tool
 
-![SpectrePDF Logo](https://via.placeholder.com/150?text=SpectrePDF) <!-- Replace with actual logo if available -->
-
 Welcome to **SpectrePDF**, a powerful Python library designed for detecting, annotating, and redacting sensitive information in PDF documents using OCR (Optical Character Recognition). Whether you're handling confidential reports, legal documents, or personal files, SpectrePDF makes it easy to identify specific words or phrases and either highlight them with boxes or redact them securely—replacing them with custom text or blacking them out entirely.
 
 Built with efficiency and accuracy in mind, SpectrePDF leverages high-resolution rendering and intelligent word grouping to ensure precise results, even on complex layouts. It's ideal for privacy compliance (e.g., GDPR, HIPAA), data anonymization, or simply reviewing PDFs for key terms.
