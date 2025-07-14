@@ -72,7 +72,7 @@ No internet access is required during runtime—everything runs locally.
    Here's a basic example script:
 
    ```python
-   from SpectrePDF.anonymizer import process_pdf
+   from spectrepdf.anonymizer import process_pdf
    import json
 
    # Load targets from redaction dict keys
