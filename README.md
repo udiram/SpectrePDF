@@ -1,7 +1,7 @@
 # SpectrePDF: Python PDF Redaction and Annotation Tool
 
 ## Overview
-This project provides a Python-based tool for processing PDF documents to detect, annotate, and redact specific text using Optical Character Recognition (OCR) and image processing techniques. It leverages libraries like **PyMuPDF**, **Pillow (PIL)**, **pytesseract**, and **img2pdf** to identify target words, group them into lines, merge adjacent target word boxes, and optionally redact and replace text in the PDF. The tool is designed to be flexible, allowing users to customize the redaction process, visualize detected text with bounding boxes, and save the output as a new PDF.
+This package provides a Python-based tool for processing PDF documents to detect, annotate, and redact specific text using Optical Character Recognition (OCR) and image processing techniques. It leverages libraries like **PyMuPDF**, **Pillow (PIL)**, **pytesseract**, and **img2pdf** to identify target words, group them into lines, merge adjacent target word boxes, and optionally redact and replace text in the PDF. The tool is designed to be flexible, allowing users to customize the redaction process, visualize detected text with bounding boxes, and save the output as a new PDF.
 
 ## Features
 - **Text Detection**: Uses Tesseract OCR to identify text and their bounding boxes in PDF pages rendered as images.
@@ -13,70 +13,82 @@ This project provides a Python-based tool for processing PDF documents to detect
 - **Font Size Estimation**: Dynamically estimates the appropriate font size to fit replacement text within the redacted area.
 - **Output Generation**: Converts processed images back into a PDF file.
 - **Customizable Parameters**: Allows users to toggle redaction, choose whether to show all or only target boxes, and customize target words and replacement text.
+- **Modular Design**: Exposes multiple helper functions for advanced customization, such as rendering pages, performing OCR, collecting words, grouping lines, merging boxes, and more.
 
 ## Dependencies
-- **PyMuPDF** (`pymupdf`): For PDF handling and rendering pages as images.
-- **Pillow** (`PIL`): For image processing and drawing.
-- **pytesseract**: For OCR to extract text and bounding box data.
-- **img2pdf**: For converting processed images back to PDF.
-- **statistics**: For calculating median word height to group words into lines.
+- **PyMuPDF** (`pymupdf>=1.24.0`): For PDF handling and rendering pages as images.
+- **Pillow** (`PIL>=10.0.0`): For image processing and drawing.
+- **pytesseract** (`>=0.3.10`): For OCR to extract text and bounding box data.
+- **img2pdf** (`>=0.5.1`): For converting processed images back to PDF.
+- **statistics**: For calculating median word height to group words into lines (included in Python standard library).
 
-Install dependencies using:
+Install the package and its dependencies using:
 ```bash
-pip install pymupdf Pillow pytesseract img2pdf
+pip install SpectrePDF
 ```
 
-Additionally, you need to have **Tesseract-OCR** installed on your system and specify its path in the script (e.g., `C:\Program Files\Tesseract-OCR\tesseract.exe` for Windows).
+Additionally, you need to have **Tesseract-OCR** installed on your system. Download and install from [https://github.com/tesseract-ocr/tesseract](https://github.com/tesseract-ocr/tesseract). Ensure `tesseract` is in your PATH, or provide the path via the `tesseract_cmd` parameter in `process_pdf`.
 
 ## Usage
-1. **Prepare Input PDF**: Ensure you have an input PDF file (e.g., `input.pdf`) to process.
-2. **Configure Parameters**:
-   - `target_words`: List of words to detect (case-insensitive).
-   - `redaction_dict`: Dictionary mapping target words to their replacement text.
-   - `show_all_boxes`: Set to `True` to draw black boxes around all detected words, or `False` to use blue (target) and red (non-target) boxes.
-   - `only_target_boxes`: Set to `True` to draw boxes only around target words.
-   - `redact_targets`: Set to `True` to redact target words and replace them with text from `redaction_dict`.
-3. **Run the Script**:
+1. **Install the Package**: Use the command above to install `pdf-SpectrePDF`.
+2. **Import and Configure**:
+   - Import the main function: `from SpectrePDF import process_pdf`
+   - Define `target_words`: List of words to detect (case-insensitive).
+   - Define `redaction_dict`: Dictionary mapping target words to their replacement text.
+   - Set flags: `show_all_boxes`, `only_target_boxes`, `redact_targets`.
+3. **Process the PDF**:
    ```python
-   python script.py
+   from SpectrePDF import process_pdf
+
+   target_words = ["first_name", "last_name", "name1", "name2", "(alphanumeric)", "name3", "name4", "group", "name"]
+   redaction_dict = {
+       "first_name": "Homer",
+       "last_name": "Simpson",
+       "(alphanumeric)": "(ABC123456)",
+       "name1": "The King",
+       "name2": "of England",
+       "name3": "Yobbo",
+       "name4": "Muppet",
+       "group": "123",
+       "name": "456",
+   }
+   process_pdf(
+       input_pdf='input.pdf',
+       output_pdf='redacted.pdf',
+       target_words=target_words,
+       redaction_dict=redaction_dict,
+       show_all_boxes=False,
+       only_target_boxes=False,
+       redact_targets=True,
+       tesseract_cmd=r'C:\Program Files\Tesseract-OCR\tesseract.exe',  # Optional, adjust as needed
+       dpi=500
+   )
    ```
-   The script processes the input PDF, applies the specified operations, and saves the output to `output_pdf` (e.g., `redacted.pdf`).
+   This processes `input.pdf`, applies redaction to target words, and saves the result to `redacted.pdf`.
 4. **Output**: The processed PDF will contain annotated or redacted text as per the configuration.
 
-### Example
-```python
-target_words = ["first_name", "last_name", "name1", "name2", "(alphanumeric)", "name3", "name4", "group", "name"]
-redaction_dict = {
-    "first_name": "Homer",
-    "last_name": "Simpson",
-    "(alphanumeric)": "(ABC123456)",
-    "name1": "The King",
-    "name2": "of England",
-    "name3": "Yobbo",
-    "name4": "Muppet",
-    "group": "123",
-    "name": "456",
-}
-process_pdf(
-    input_pdf='input.pdf',
-    output_pdf='redacted.pdf',
-    target_words=target_words,
-    redaction_dict=redaction_dict,
-    show_all_boxes=False,
-    only_target_boxes=False,
-    redact_targets=True
-)
-```
-
-This configuration redacts target words in `input.pdf` and replaces them with corresponding values from `redaction_dict`, saving the result to `redacted.pdf`.
-
 ## Key Functions
-- `estimate_font_size_for_phrase(phrase, box_width, box_height, font_path, max_iterations)`: Estimates the optimal font size to fit a replacement phrase within a bounding box, falling back to a default font if the specified font is unavailable.
-- `process_pdf(input_pdf, output_pdf, target_words, redaction_dict, show_all_boxes, only_target_boxes, redact_targets)`: Main function to process the PDF, perform OCR, group words, merge boxes, and apply redaction or annotation.
+- `estimate_font_size_for_phrase(phrase, box_width, box_height, font_path="arial.ttf", max_iterations=10)`: Estimates the optimal font size to fit a replacement phrase within a bounding box, falling back to a default font if the specified font is unavailable.
+- `process_pdf(input_pdf, output_pdf, target_words, redaction_dict, show_all_boxes=False, only_target_boxes=False, redact_targets=False, tesseract_cmd=None, dpi=500)`: Main function to process the PDF, perform OCR, group words, merge boxes, and apply redaction or annotation.
+- `render_pages_to_images(doc, dpi=500)`: Renders PDF pages to PIL images.
+- `perform_ocr(img)`: Performs OCR on an image.
+- `collect_words(ocr_data, target_words)`: Collects word data from OCR results.
+- `group_words_into_lines(words)`: Groups words into lines based on vertical position.
+- `merge_target_groups(line)`: Merges adjacent target words in a line and collects boxes.
+- `create_merged_box(group, is_target)`: Creates a merged box from a group of words.
+- `create_single_box(word, is_target)`: Creates a box from a single word.
+- `collect_boxes(lines, only_target_boxes=False)`: Collects boxes from lines, optionally filtering non-targets.
+- `get_replacement_phrase(words, redaction_dict)`: Constructs replacement phrase for redaction.
+- `redact_box(draw, box, redaction_dict)`: Redacts a box and draws replacement text.
+- `draw_box_outline(draw, box, color)`: Draws outline around a box.
+- `process_boxes(draw, boxes, redact_targets, redaction_dict, show_all_boxes)`: Processes boxes: redacts or draws outlines.
+- `save_image_to_bytes(img)`: Saves PIL image to bytes.
+
+For advanced usage, import these functions from `SpectrePDF`.
 
 ## Performance
 - The script measures and prints the processing time for the entire operation.
-- High DPI (500) is used for rendering PDF pages to ensure accurate OCR results, which may increase processing time for large documents.
+- High DPI (default 500) is used for rendering PDF pages to ensure accurate OCR results, which may increase processing time for large documents.
 
 ## Limitations
 - Requires Tesseract-OCR to be installed and properly configured.
@@ -93,4 +105,3 @@ This configuration redacts target words in `input.pdf` and replaces them with co
 
 ## License
 This project is licensed under the MIT License. See the `LICENSE` file for details.
-
