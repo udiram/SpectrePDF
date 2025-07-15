@@ -308,7 +308,9 @@ We welcome contributions! Fork the repo, create a branch, and submit a pull requ
 Report issues on GitHub.
 
 ## License
-MIT License. See [LICENSE](LICENSE) for details.
+
+This project is licensed under the GNU Affero General Public License v3.0.  
+See the [LICENSE](./LICENSE) file for full details.
 
 ## Acknowledgments
 - Powered by PyMuPDF, Tesseract, and Pillow.
