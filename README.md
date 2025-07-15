@@ -33,7 +33,7 @@ SpectrePDF is perfect for developers, data privacy officers, researchers, and an
 SpectrePDF is a Python package that requires Python 3.6+. Install it via pip (assuming you've packaged it; if not, clone the repo and install dependencies manually).
 
 ```bash
-pip install spectrepdf  # If published on PyPI; otherwise, use git
+pip install spectrepdf 
 # Or clone and install:
 git clone https://github.com/udiram/spectrePDF.git
 cd spectrePDF
