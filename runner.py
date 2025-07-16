@@ -8,7 +8,7 @@ target_words = list(redaction_dict.keys())
 
 # Process the PDF (example: redact targets with replacement)
 process_pdf(
-    input_pdf="FANNY_SINCLAIR_PHYSX_YUAN_Proton.pdf",
+    input_pdf="input.pdf",
     output_pdf="output_redacted.pdf",
     target_words=target_words,
     redaction_json_path="redaction.json",
