@@ -111,22 +111,15 @@ def group_words_into_lines(words, verbosity=1):
         print(f"Grouped words into {len(lines)} lines")
     return lines
 
+# (Commented-out block removed to clean up the file)
+
 def merge_target_groups(line, verbosity=1):
-    """Merge adjacent target words in a line and collect boxes."""
+    """Never merge: each target word gets its own box."""
     boxes = []
-    current_group = []
     for word in line:
-        if word['is_target']:
-            current_group.append(word)
-        else:
-            if current_group:
-                boxes.append(create_merged_box(current_group, is_target=True))
-                current_group = []
-            boxes.append(create_single_box(word, is_target=False))
-    if current_group:
-        boxes.append(create_merged_box(current_group, is_target=True))
+        boxes.append(create_single_box(word, is_target=word['is_target']))
     if verbosity >= 2:
-        print(f"Merged {len(boxes)} boxes in line")
+        print(f"Created {len(boxes)} individual boxes in line")
     return boxes
 
 def create_merged_box(group, is_target):
