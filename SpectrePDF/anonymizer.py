@@ -119,7 +119,7 @@ def merge_target_groups(line, verbosity=1):
     for word in line:
         boxes.append(create_single_box(word, is_target=word['is_target']))
     if verbosity >= 2:
-        print(f"Merged {len(boxes)} boxes in line")
+        print(f"Created {len(boxes)} individual boxes in line")
     return boxes
 
 def create_merged_box(group, is_target):
