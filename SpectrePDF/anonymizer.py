@@ -8,6 +8,69 @@ import statistics
 from tqdm import tqdm
 import os
 import json
+import re
+
+def find_substring_matches(text, target_words):
+    """Find all substring matches and their positions within the text."""
+    matches = []
+    text_lower = text.lower()
+    
+    for target_word in target_words:
+        target_lower = target_word.lower()
+        start = 0
+        while True:
+            pos = text_lower.find(target_lower, start)
+            if pos == -1:
+                break
+            matches.append({
+                'target': target_word,
+                'start': pos,
+                'end': pos + len(target_word),
+                'matched_text': text[pos:pos + len(target_word)]
+            })
+            start = pos + 1  # Allow overlapping matches
+    
+    # Sort matches by start position
+    matches.sort(key=lambda x: x['start'])
+    return matches
+
+def calculate_substring_boxes(word, word_box, substring_matches):
+    """Calculate precise bounding boxes for substring matches within a word."""
+    if not substring_matches:
+        return []
+    
+    word_text = word['text']
+    word_width = word_box['width']
+    word_height = word_box['height']
+    word_x = word_box['x']
+    word_y = word_box['y']
+    
+    # Estimate character width by dividing word width by character count
+    if len(word_text) == 0:
+        return []
+    
+    char_width = word_width / len(word_text)
+    
+    substring_boxes = []
+    for match in substring_matches:
+        # Calculate the position and size of the substring
+        substring_x = word_x + (match['start'] * char_width)
+        substring_width = (match['end'] - match['start']) * char_width
+        
+        substring_boxes.append({
+            'x': int(substring_x),
+            'y': word_y,
+            'width': int(substring_width),
+            'height': word_height,
+            'is_target': True,
+            'target_word': match['target'],
+            'matched_text': match['matched_text'],
+            'original_word': word_text,
+            'start_pos': match['start'],
+            'end_pos': match['end']
+        })
+    
+    return substring_boxes
 
 def estimate_font_size_for_phrase(phrase, box_width, box_height, font_path="arial.ttf", max_iterations=10):
     """
@@ -70,7 +133,7 @@ def perform_ocr(img, verbosity=1):
         raise RuntimeError(f"OCR failed: {e}")
 
 def collect_words(ocr_data, target_words, verbosity=1):
-    """Collect word data from OCR results."""
+    """Collect word data from OCR results and identify substring matches."""
     words = []
     for i in range(len(ocr_data['text'])):
         text = ocr_data['text'][i]
@@ -80,8 +143,19 @@ def collect_words(ocr_data, target_words, verbosity=1):
         y = ocr_data['top'][i]
         width = ocr_data['width'][i]
         height = ocr_data['height'][i]
-        is_target = any(target_word.lower() in text.lower() for target_word in target_words)
-        words.append({'text': text, 'x': x, 'y': y, 'width': width, 'height': height, 'is_target': is_target})
+        
+        # Find all substring matches within this word
+        substring_matches = find_substring_matches(text, target_words)
+        
+        words.append({
+            'text': text, 
+            'x': x, 
+            'y': y, 
+            'width': width, 
+            'height': height, 
+            'is_target': len(substring_matches) > 0,
+            'substring_matches': substring_matches
+        })
     if verbosity >= 2:
         print(f"Collected {len(words)} words from OCR data")
     return words
@@ -114,12 +188,24 @@ def group_words_into_lines(words, verbosity=1):
 # (Commented-out block removed to clean up the file)
 
 def merge_target_groups(line, verbosity=1):
-    """Never merge: each target word gets its own box."""
+    """Create boxes for words, with substring-level boxes for target matches."""
     boxes = []
     for word in line:
-        boxes.append(create_single_box(word, is_target=word['is_target']))
+        if word['is_target'] and word.get('substring_matches'):
+            # Create substring-level boxes for target matches
+            word_box = create_single_box(word, is_target=False)  # Non-target for the whole word
+            substring_boxes = calculate_substring_boxes(word, word_box, word['substring_matches'])
+            if verbosity >= 2:
+                print(f"Word '{word['text']}' has {len(substring_boxes)} substring boxes")
+                for i, sbox in enumerate(substring_boxes):
+                    print(f"  Substring box {i}: '{sbox['matched_text']}' at x={sbox['x']}, w={sbox['width']}")
+            boxes.extend(substring_boxes)
+        else:
+            # Create a single box for the entire word (non-target)
+            boxes.append(create_single_box(word, is_target=word['is_target']))
+    
     if verbosity >= 2:
-        print(f"Created {len(boxes)} individual boxes in line")
+        print(f"Created {len(boxes)} boxes in line (including substring boxes)")
     return boxes
 
 def create_merged_box(group, is_target):
@@ -178,6 +264,13 @@ def get_replacement_phrase(words, redaction_dict):
             replacement_parts.append(text)
     return ' '.join(replacement_parts)
 
+def get_substring_replacement(box, redaction_dict):
+    """Get replacement text for a substring box."""
+    if 'target_word' in box:
+        target_word = box['target_word']
+        return redaction_dict.get(target_word, "[REDACTED]")
+    return "[REDACTED]"
+
 def redact_box(draw, box, redaction_dict, black_redaction=False, verbosity=1):
     """Redact a box: fill with black if black_redaction, else white and draw replacement text."""
     try:
@@ -185,7 +278,14 @@ def redact_box(draw, box, redaction_dict, black_redaction=False, verbosity=1):
             draw.rectangle([(box['x'], box['y']), (box['x'] + box['width'], box['y'] + box['height'])], fill='black')
         else:
             draw.rectangle([(box['x'], box['y']), (box['x'] + box['width'], box['y'] + box['height'])], fill='white')
-            replacement_phrase = get_replacement_phrase(box['words'], redaction_dict)
+            
+            # Check if this is a substring box
+            if 'target_word' in box:
+                replacement_phrase = get_substring_replacement(box, redaction_dict)
+            else:
+                # Handle legacy box format with words
+                replacement_phrase = get_replacement_phrase(box.get('words', []), redaction_dict)
+            
             if verbosity >= 2:
                 print(f"Redacting with phrase: '{replacement_phrase}'")
             font = estimate_font_size_for_phrase(replacement_phrase, box['width'], box['height'])
